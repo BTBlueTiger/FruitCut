@@ -38,9 +38,9 @@ def calculate_random_parabola(speed):
 
     # create with numpy the x values of the parabola, 100 -> 100 values of x
     if x_pos > middle_of_x:
-        x_values = np.linspace(middle_of_x, x_pos, speed * 20)
+        x_values = np.linspace(middle_of_x, x_pos, speed * 40)
     else:
-        x_values = np.linspace(x_pos, middle_of_x, speed * 20)
+        x_values = np.linspace(x_pos, middle_of_x, speed * 40)
 
     if random.randint(0, 1) == 0:
         x_values.sort(-1)

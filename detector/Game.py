@@ -16,6 +16,10 @@ class Game:
         """
         pygame.init()
         pygame.display.set_caption(Config.CAPTION)
+        pygame.mixer.init()
+        self.point_sound = pygame.mixer.Sound(f"{Config.SOUND_DIR}points.wav")
+        self.explosion_sound = pygame.mixer.Sound(f"{Config.SOUND_DIR}explosion.wav")
+        self.point_sound.set_volume(0.5)
 
         self.running = True
         self.screen = pygame.display.set_mode(Config.SCREEN)
@@ -31,6 +35,9 @@ class Game:
         self.players = [
             Player((255, 0, 0), (10, 10), 50)
         ]
+        self.player_sprite_group = pygame.sprite.Group()
+        for player in self.players:
+            self.player_sprite_group.add(player)
 
         # record tick = each frame will be named after this value
         self.record_tick = 0
@@ -80,7 +87,6 @@ class Game:
             for player in self.players:
                 player.update_score_board(self.screen)
                 player.update_mouse(pygame.mouse.get_pos())
-                pygame.draw.rect(self.screen, player.color, player.bounding_box, 2)
 
             # update entities
             for entity in self.entities:
@@ -89,33 +95,22 @@ class Game:
                     self.entities.remove(entity)
                     self.entity_sprite_group.remove(entity)
                 else:
-                    # check for collision
-                    for player in self.players:
-                        if entity.rect.colliderect(player.bounding_box):
-                            if entity.image_name == "bomb":
-                                pass
-                            else:
-                                pos = entity.rect
-                                for i in range(2):
-                                    path = Utils.calculate_rest_path(pos)
-                                    cut_entity = Entity.HitEnemy(entity.image_name, path[0], path[1], 5, 1)
-                                    self.cut_entity_group.add(cut_entity)
-                                    self.cut_entities.append(cut_entity)
-                            entity.delete = True
+                    if entity.free2catch:
+                        # check for collision
+                        for player in self.players:
+                            if entity.rect.colliderect(player.rect):
+                                if entity.points > 0:
+                                    self.point_sound.play()
+                                else:
+                                    self.explosion_sound.play()
+                                player.update_points(entity.points)
+                                entity.delete = True
                     entity.update()
 
-            for cut_entity in self.cut_entity_group:
-                if cut_entity.delete:
-                    cut_entity.remove()
-                    self.cut_entity_group.remove(cut_entity)
-                    self.cut_entities.remove(cut_entity)
-
-                cut_entity.update()
-
             # pygame will draw all entities by itself
-            # as long as they are in the sprite group
+            # as long as they are in a sprite group
             self.entity_sprite_group.draw(self.screen)
-            self.cut_entity_group.draw(self.screen)
+            self.player_sprite_group.draw(self.screen)
 
             # update the recorders counter
             if self.recorder is not None:
@@ -133,15 +128,21 @@ class Game:
         pygame.quit()
 
 
-class Player:
+class Player(pygame.sprite.Sprite):
     def __init__(self, color, score_board_pos, size):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load(".././res/Assets/basket_64.png")
+        self.rect = self.image.get_rect()
         self.points = 0
         self.color = color
         self.score_board_pos = score_board_pos
 
         self.pos = (0, 0)
+        self.rect[0], self.rect[1] = self.pos[0], self.pos[1]
         self.size = size
-        self.bounding_box = pygame.Rect(self.pos[0] - size // 2, self.pos[1] - size // 2, size, size)
+
+    def update_points(self, points):
+        self.points += points
 
     def update_score_board(self, screen):
         # -- add Text on screen (e.g. score)
@@ -150,7 +151,7 @@ class Player:
         screen.blit(score_board, self.score_board_pos)
 
     def update_mouse(self, pos):
-        self.bounding_box.update(pos[0] - self.size // 2, pos[1] - self.size // 2, self.size, self.size)
+        self.rect.update(pos[0] - self.size // 2, pos[1] - self.size // 2, self.size, self.size)
 
 
 game = Game(record_on=False, with_webcam=False)
