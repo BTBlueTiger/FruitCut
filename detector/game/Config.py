@@ -15,10 +15,15 @@ SCREEN_MAX_HEIGHT_FRUIT = 200
 # Webcam URL
 IP_CAM = "http://192.168.178.58:8080"
 
+ASSET_DIR = os.path.join(os.path.dirname(__file__), "..\\..\\res\\Assets\\")
+
 # Assets to the fruits, relativ
-ASSETS_DIR = os.path.join(os.path.dirname(__file__), "..\\..\\res\\Assets\\"
-                                                     "fruit-ninja-assets-master_"
-                                                     "extended_40\\")
+TEXTURE_DIR = os.path.join(os.path.dirname(__file__), f"{ASSET_DIR}"
+                                                      "fruit-ninja-assets-master_"
+                                                      "extended_40\\")
+
+SOUND_DIR = os.path.join(os.path.dirname(__file__), f"{ASSET_DIR}"
+                                                    "sounds\\")
 
 # Dir to the Captured Videos, relativ
 RECORD_DIR = os.path.join(os.path.dirname(__file__), "..\\..\\res\\Capture\\")

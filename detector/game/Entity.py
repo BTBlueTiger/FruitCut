@@ -8,7 +8,7 @@ from detector.game.Utils import calculate_random_parabola
 
 
 class Entity(pygame.sprite.Sprite):
-    def __init__(self, image, x_values, y_values, speed):
+    def __init__(self, image, x_values, y_values, speed, points):
         """
         Every entity that has ever existed should inherit from this.
         Every entity inheriting from this can be rendered by pygame and will be updated by the game.
@@ -20,18 +20,21 @@ class Entity(pygame.sprite.Sprite):
         :param y_values:represents each y value on its parabolic way
         :param speed: should in future configure speed of types
         """
+        self.points = points
         self.image_name = image
-        self.image = pygame.image.load(f"{Config.ASSETS_DIR}{image}.png")
+        self.image = pygame.image.load(f"{Config.TEXTURE_DIR}{image}.png")
         pygame.sprite.Sprite.__init__(self)
         self.rect = self.image.get_rect()
         self.x_values, self.y_values = x_values, y_values
         # Every entity has its own ticker for its x and y values
         self.current_tick = 0
         self.rect.x, self.rect.y = x_values[0], y_values[0]
+        self.previous_y = 0
         self.speed = speed
         # if set true this entity will be removed from the main game sprite group and its entity list
         self.delete = False
         self.collision = False
+        self.free2catch = False
 
     def getImage(self):
         return self.image
@@ -47,10 +50,14 @@ class Entity(pygame.sprite.Sprite):
                 len(self.y_values) <= self.current_tick:
             self.delete = True
         elif self.collision:
+            self.sound.play()
             self.delete = True
         else:
+            previous_y = self.rect[1]
             self.rect[0] = self.x_values[self.current_tick]
             self.rect[1] = self.y_values[self.current_tick]
+            if previous_y < self.rect[1]:
+                self.free2catch = True
 
 
 class HitEnemy(Entity):
@@ -90,5 +97,6 @@ def get_random_entity():
     entity_name = rand_entity.value
     concrete_entity = ENTITY_CONFIG[entity_name]
     speed = concrete_entity["speed"]
+    points = concrete_entity["points"]
     parabola_array = calculate_random_parabola(speed)
-    return Entity(entity_name, parabola_array[0], parabola_array[1], speed)
+    return Entity(entity_name, parabola_array[0], parabola_array[1], speed, points)

@@ -72,3 +72,5 @@ ehthumbs.db
 # Others
 *.bak
 *.orig
+
+/res/Capture/
