@@ -50,7 +50,6 @@ class Entity(pygame.sprite.Sprite):
                 len(self.y_values) <= self.current_tick:
             self.delete = True
         elif self.collision:
-            self.sound.play()
             self.delete = True
         else:
             previous_y = self.rect[1]
@@ -61,6 +60,8 @@ class Entity(pygame.sprite.Sprite):
 
 
 class HitEnemy(Entity):
+    """DEPRECATED AT THIS MOMENT"""
+
     def __init__(self, image, x_values, y_values, speed, part):
         """
         FUTURE: Bombs or split Fruits that should not be noted anymore

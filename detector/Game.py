@@ -1,13 +1,22 @@
+import cv2
 import pygame
 
-from detector.computer_vision.Cam import OpenCVCapture
-from detector.game import Config, Entity, Utils
+import logging
 
+from detector.game import Config, Entity, Utils
+from detector.computer_vision.Cam import OpenCVCapture
+from detector.computer_vision import BGS
 from detector.computer_vision.Cam import Recorder
+
+import logging
+
+logging.basicConfig()
+logging.getLogger().setLevel(logging.INFO)
+game_logger = logging.getLogger("Game")
 
 
 class Game:
-    def __init__(self, record_on=False, with_webcam=False):
+    def __init__(self, record_on=False, with_webcam=False, show_fps=False):
         """
         The game, brings together all the items,
         Webcam is a Phone Webcam, in Config.py the url has to be set
@@ -15,6 +24,9 @@ class Game:
         :param with_webcam: Should the IP CAM be used
         """
         pygame.init()
+
+        logging.info("Pygame init")
+
         pygame.display.set_caption(Config.CAPTION)
         pygame.mixer.init()
         self.point_sound = pygame.mixer.Sound(f"{Config.SOUND_DIR}points.wav")
@@ -23,7 +35,12 @@ class Game:
 
         self.running = True
         self.screen = pygame.display.set_mode(Config.SCREEN)
+
+        game_logger.info(f"Display: {Config.SCREEN}")
+
         self.clock = pygame.time.Clock()
+        self.show_fps = show_fps
+        self.fps_tick = 0
 
         # this games uses sprite_groups of pygame to manage easily all entities
         self.entity_sprite_group = pygame.sprite.Group()
@@ -35,9 +52,12 @@ class Game:
         self.players = [
             Player((255, 0, 0), (10, 10), 50)
         ]
+
         self.player_sprite_group = pygame.sprite.Group()
         for player in self.players:
             self.player_sprite_group.add(player)
+
+        game_logger.info(f"Initialized Players: {self.players}")
 
         # record tick = each frame will be named after this value
         self.record_tick = 0
@@ -45,13 +65,23 @@ class Game:
         # our webcam instance
         self.cap = None
         if with_webcam:
-            self.cap = OpenCVCapture(Config.IP_CAM)
+            self.cap = OpenCVCapture(Config.IP_CAM,
+                                     frame_processor=BGS.BackSubProcessors[
+                                         BGS.BackSubTyp.MOG_OPEN_CV])
             self.cap.start_fetching_thread()
+            game_logger.info(f"Webcam with IP:{Config.IP_CAM}")
+            if self.cap.frame_processor is not None:
+                game_logger.info(f"Frame processor is set: {self.cap.frame_processor}")
+        else:
+            game_logger.info(f"No Webcam")
 
         # our recorder
         self.recorder = None
         if record_on:
             self.recorder = Recorder()
+            game_logger.info(f"Recorder with Record directory:{self.recorder.record_dir}")
+        else:
+            game_logger.info(f"No Recorder")
 
     def key_manager(self):
         for event in pygame.event.get():
@@ -61,6 +91,12 @@ class Game:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
+
+    def draw_fps(self):
+        if self.show_fps:
+            pos = (Config.SCREEN_WIDTH - 150, Config.SCREEN_HEIGHT - 75)
+            black = (255, 255, 255)
+            Utils.draw_on_screen(self.screen, f"FPS: {self.clock.get_fps().__floor__()}", pos, black)
 
     def run(self):
         while self.running:
@@ -118,7 +154,9 @@ class Game:
                 self.recorder.record(self.screen, self.record_tick)
 
             # tick tick
+            self.draw_fps()
             self.clock.tick(Config.FPS)
+            self.fps_tick += 1
             # update display last
             pygame.display.update()
 
@@ -145,14 +183,11 @@ class Player(pygame.sprite.Sprite):
         self.points += points
 
     def update_score_board(self, screen):
-        # -- add Text on screen (e.g. score)
-        text_font = pygame.font.SysFont("arial", 26)
-        score_board = text_font.render(f'Score: {self.points}', True, self.color)
-        screen.blit(score_board, self.score_board_pos)
+        Utils.draw_on_screen(screen, f'Score: {self.points}', self.score_board_pos, self.color)
 
     def update_mouse(self, pos):
         self.rect.update(pos[0] - self.size // 2, pos[1] - self.size // 2, self.size, self.size)
 
 
-game = Game(record_on=False, with_webcam=False)
+game = Game(record_on=False, with_webcam=True, show_fps=True)
 game.run()

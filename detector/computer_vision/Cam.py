@@ -10,11 +10,12 @@ import threading
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 
 from detector.game import Config
+from detector.computer_vision import BGS
 
 
 class OpenCVCapture:
 
-    def __init__(self, url):
+    def __init__(self, url, frame_processor=None):
         """
         Uses a URL that belongs to an IP webcam.
         (Within the used project via the APP IP Webcam
@@ -24,6 +25,8 @@ class OpenCVCapture:
         self.url = url
         self.image = None
         self.lock = threading.Lock()  # Create a lock to protect access to self.image
+        self.frame_processor = frame_processor
+        self.frame_processor.start_calculation_thread()
 
     def get_ip_cam_img(self) -> pygame.Surface:
         """
@@ -36,15 +39,28 @@ class OpenCVCapture:
     def fetch_image_thread(self):
         while True:
             # Request the webcam for a jpg
+
             request = requests.get(f"{self.url}/shot.jpg")
             # Decode the image
-            img_arr = np.array(bytearray(request.content), dtype=np.uint8)
-            img = cv2.imdecode(img_arr, -1)
+            img_arr = np.frombuffer(request.content, dtype=np.uint8)
+
+            img = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)  # Use cv2.IMREAD_COLOR for a color image
+
             # Resize to match the Config
-            img = imutils.resize(img, width=Config.SCREEN_WIDTH, height=Config.SCREEN_HEIGHT)
+            img = cv2.resize(img, (Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT))
+
             # Change the channels and rotate the image to fit the game
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
             img = np.rot90(img)
+
+            if self.frame_processor is not None:
+                self.frame_processor.apply(img)
+                processed = self.frame_processor.processed_frame
+                if processed is not None:
+                    img = self.frame_processor.processed_frame
+            else:
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
             # Make a surface of it
             img_surface = pygame.surfarray.make_surface(img).convert()
 
