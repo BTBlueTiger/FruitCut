@@ -5,6 +5,9 @@ import numpy as np
 from enum import Enum
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
+import Config
+import pybind11
+from computer_vision.Release import moving_average_module
 
 
 class BackSubTyp(Enum):
@@ -14,47 +17,44 @@ class BackSubTyp(Enum):
     MOVING_AVERAGE = 3
 
 
+class ThreshHoldTyp(Enum):
+    ADAPTIV = 0
+    OTSU = 1
+    MANUAL = 2
+
+
+class ThreshCalculationTyp(Enum):
+    MEDIAN = 0
+    MEDIAN_WEIGHTED = 1
+    MEAN = 2
+    MEAN_WEIGHTED = 3
+
+
 class BackSubProcessor:
-    def __init__(self, sampling_rate=-1, n_frames=0):
+    def __init__(self, history=10, sampling_rate=1):
         self.processed_frame = None
+        self._calculation_lock = threading.Lock()
+        self._calculation_event = threading.Event()
         self._current_frame = None
+        self._history = history
+        self._sampling_rate = sampling_rate
+
+        """
         self._queue_changed = False
-        self._frame_queue = deque()
+        self._frame_queue = deque(maxlen=n_frames)
         self._filter_executor = ThreadPoolExecutor(max_workers=2)
         self._sampling_rate = sampling_rate
         self._sampling_ticks = 0
         self._n_frames = n_frames
-        self._calculation_lock = threading.Lock()
-        self._calculation_event = threading.Event()
         self._calculated_value = 0
         self._threshold = 0
         self._thresh_ticker = 0
-        self._thresh_ticks2_new_thresh = 15
-
-    def _update_queue(self, frame):
-        previous_length = len(self._frame_queue)
-        if self._sampling_rate < 0:
-            pass
-        elif self._sampling_rate == 0:
-            self._frame_queue.append(frame)
-        elif self._sampling_rate > 0:
-            if self._sampling_ticks % self._sampling_rate == 0:
-                self._frame_queue.append(frame)
-                self._sampling_ticks = 0
-            else:
-                self._sampling_ticks += 1
-        if previous_length < len(self._frame_queue):
-            self._queue_changed = True
-        else:
-            self._queue_changed = False
-        print(previous_length)
-        if len(self._frame_queue) > 10:
-            self._frame_queue.popleft()
+        self._thresh_ticks2_new_thresh = 15  #
+        self.mv = moving_average_module.MovingAverage(10)
+        """
 
     def apply(self, frame):
         self._current_frame = frame
-        self._update_queue(frame)
-        self._thresh_ticker += 1
         self._calculation_event.set()
 
     def start_calculation_thread(self):
@@ -72,146 +72,128 @@ class BackSubProcessor:
     def _apply_filter(self, frame):
         raise NotImplementedError("Subclasses must implement _apply_filter")
 
-    def _frame(self, frame):
-        self._thresh_ticker += 1
-        # print(self._thresh_ticker)
-        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        # if self._thresh_ticker >= self._thresh_ticks2_new_thresh:
-        #    self._thresh_ticker = 0
-        #    self._threshold, _ = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-        # thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, -5)
-        _, thresh = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
-        # thresh = cv2.bitwise_and(thresh, self._threshold)
-        return thresh
-
 
 class MogOpenCV(BackSubProcessor):
-    def __init__(self):
-        super().__init__()
-        self.backSub = cv2.createBackgroundSubtractorMOG2(history=10, detectShadows=False)
+    def __init__(self, history=10):
+        super().__init__(history=history)
+        self.backSub = cv2.createBackgroundSubtractorMOG2(history=self._history, detectShadows=False)
 
     def _apply_filter(self, frame):
         return self.backSub.apply(frame)
 
 
 class KnnOpenCV(BackSubProcessor):
-    def __init__(self):
-        super().__init__()
-        self.backSub = cv2.createBackgroundSubtractorKNN(history=10, detectShadows=False)
+    def __init__(self, history=10):
+        super().__init__(history=history)
+        self.backSub = cv2.createBackgroundSubtractorKNN(history=self._history, detectShadows=False)
 
     def _apply_filter(self, frame):
         return self.backSub.apply(frame)
 
 
 class MovingAverage(BackSubProcessor):
-    def __init__(self, sampling_rate=0, n_frames=10, omega_a=0.1, omega_i=0.9, omega_c=0.5):
-        super().__init__(sampling_rate=sampling_rate, n_frames=n_frames)
-        self._omega_a = omega_a
-        self._omega_i = omega_i
-        self._omega_c = omega_c
 
-    def weighted(self):
-        pass
-
-    def unweighted(self):
-        pass
+    def __init__(self, history=10):
+        super().__init__(history=history)
+        self.backSub = moving_average_module.MovingAverage(history)
 
     def _apply_filter(self, frame):
-        # if self._queue_changed:
-        self._calculated_value = np.median(self._frame_queue, axis=0).astype(np.uint8)
-
-        result_frame = cv2.absdiff(frame, self._calculated_value)
-
-        return self._frame(result_frame)
+        frame = np.array(frame, dtype=np.uint8)
+        self.backSub.apply(frame)
+        print("Hello")
+        return frame
 
 
-class ExperimentalFilterType(Enum):
-    MOVING_AVERAGE = 0
-    WEIGHTED_MOVING_AVERAGE = 1
-    TEMPORAL_MEDIAN_FILTER = 2
-    WEIGHTED_MEDIAN_FILTER = 3
-
-
-class SimpleAverageFunctions(BackSubProcessor):
-
-    def __init__(self, experimental_filter_typ, n_frames, sampling_rate, omega_a=0.2, omega_i=0.8,
-                 omega_c=0.5):
-        super().__init__(sampling_rate=sampling_rate, n_frames=n_frames)
-
+class MovingAverages(BackSubProcessor):
+    def __init__(self, sampling_rate=0, history=10, omega_a=.2, omega_i=.8, omega_c=.5,
+                 calculation_type=ThreshCalculationTyp.MEDIAN_WEIGHTED,
+                 thresholding_typ=ThreshHoldTyp.ADAPTIV, treshhold_manual=120):
+        super().__init__(history=history)
         self._omega_a = omega_a
         self._omega_i = omega_i
         self._omega_c = omega_c
-
-        self._threshold = 0
-        self.thresh_calculated = 0
-        self._thresh_ticker = 0
-        self._thresh_ticks2_new_thresh = 15
-
-        self._calculated_value = 0
-
-        self._filter_type = {
-            ExperimentalFilterType.MOVING_AVERAGE: self._simple_moving_average,
-            ExperimentalFilterType.WEIGHTED_MOVING_AVERAGE: self._moving_average_by_cv_modern_approach,
-            ExperimentalFilterType.TEMPORAL_MEDIAN_FILTER: self._simple_temporal_median_filter,
-            ExperimentalFilterType.WEIGHTED_MEDIAN_FILTER: self._weighted_median_filter
-        }.get(experimental_filter_typ)
-
-    def _make_frame_with_threshold(self, frame):
-        self._thresh_ticker += 1
-        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        if self._thresh_ticker == self._thresh_ticks2_new_thresh:
-            self._thresh_ticker = 0
-            self._threshold, _ = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, -4)
-        # _, thresh2 = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY_INV)
-        # thresh = cv2.bitwise_and(thresh, self._threshold)
-        return thresh
+        self._threshold_typ = thresholding_typ
+        self._threshold = treshhold_manual
+        self._calculation_typ = calculation_type
 
     def __frame(self, frame):
-        return self._filter_executor.submit(self._make_frame_with_threshold,
-                                            frame).result()
+        if self._threshold_typ == ThreshHoldTyp.ADAPTIV:
+            thresh = cv2.adaptiveThreshold(frame, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, -2)
+        elif self._threshold_typ == ThreshHoldTyp.OTSU:
+            if self._thresh_ticker == self._thresh_ticks2_new_thresh:
+                self._thresh_ticker = 0
+                self._thresh_ticker += 1
+                thresh, _ = cv2.threshold(frame, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        elif self._threshold_typ == ThreshHoldTyp.MANUAL:
+            _, thresh = cv2.threshold(frame, self._threshold, 255, cv2.THRESH_BINARY)
+        return thresh
 
-    def _simple_temporal_median_filter(self, _):
+    def _median_filter(self, _):
         return np.median(self._frame_queue, axis=0).astype(np.uint8)
 
     def _weighted_median_filter(self, frame):
         median = np.median(self._frame_queue, axis=0).astype(np.uint8)
-        return ((self._omega_a * frame + self._omega_i * median) / self._omega_c).astype(np.uint8)
+        background = np.multiply(self._omega_a, frame) + np.multiply(self._omega_i, median)
+        return np.divide(background, self._omega_c).astype(np.uint8)
 
-    def _moving_average_by_cv_modern_approach(self, frame):
-        mean = np.mean(self._frame_queue, axis=0).astype(np.uint8)
-        return ((self._omega_a * frame + self._omega_i * mean) / self._omega_c).astype(np.uint8)
-
-    def _simple_moving_average(self, _):
+    def _mean_filter(self, _):
         return np.mean(self._frame_queue, axis=0).astype(np.uint8)
 
+    def _weighted_mean_filter(self, frame):
+        mean = np.mean(self._frame_queue, axis=0).astype(np.uint8)
+        background = np.multiply(self._omega_a, frame) + np.multiply(self._omega_i, mean)
+        return np.divide(background, self._omega_c).astype(np.uint8)
+
     def _apply_filter(self, frame):
-        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        if self._queue_changed:
-            self._calculated_value = self._filter_type(gray)
-        result_frame = cv2.absdiff(self._calculated_value, gray)
+        if self._calculation_typ == ThreshCalculationTyp.MEDIAN:
+            self._calculated_value = self._median_filter(frame)
+        elif self._calculation_typ == ThreshCalculationTyp.MEDIAN_WEIGHTED:
+            self._calculated_value = self._weighted_median_filter(frame)
+        elif self._calculation_typ == ThreshCalculationTyp.MEAN:
+            self._calculated_value = self._mean_filter(frame)
+        elif self._calculation_typ == ThreshCalculationTyp.MEAN_WEIGHTED:
+            self._calculated_value = self._weighted_mean_filter(frame)
+        result_frame = cv2.absdiff(self._calculated_value, frame)
         return self.__frame(result_frame)
 
-
-"""
-    def apply(self, frame):
-        self._current_frame = frame
-        self._update_queue(frame)
-        # self._kde(frame)
-        self.calculate_values()
-        result_frame = cv2.absdiff(frame, self._calculated_value)
-        self.processed_frame = self.__frame(result_frame)
-"""
-
-self_implemented = SimpleAverageFunctions(
-    ExperimentalFilterType.TEMPORAL_MEDIAN_FILTER,
-    sampling_rate=10,
-    n_frames=10
-)
 
 BackSubProcessors = {
     BackSubTyp.MOG_OPEN_CV: MogOpenCV(),
     BackSubTyp.KNN_OPEN_CV: KnnOpenCV(),
-    BackSubTyp.SELF_IMPLEMENTED_BACK_SUB: self_implemented,
-    BackSubTyp.MOVING_AVERAGE: MovingAverage(sampling_rate=0, n_frames=10)
+    BackSubTyp.MOVING_AVERAGE: MovingAverage(10)
 }
+
+"""
+class GMM(BackSubProcessor):
+
+    def __init__(self, sampling_rate=0, n_frames=10, learning_rate=.01, threshold=.25):
+        super().__init__(sampling_rate=sampling_rate, n_frames=n_frames)
+        self.bg_models = []
+        self.is_initialized = False
+
+    def initialize(self):
+        for i in range(Config.SCREEN_HEIGHT):
+            row = []
+            for j in range(Config.SCREEN_WIDTH):
+                row.append({
+                    "weight": np.full(self._n_frames, 1.0 / self._n_frames),
+                    "means": np.zeros(self._n_frames),
+                    "var": np.ones(self._n_frames)
+                })
+            self.bg_models.append(row)
+
+    def _apply_filter(self, frame):
+        pass
+        
+    
+moving_average = MovingAverages(
+    sampling_rate=0,
+    n_frames=10,
+    omega_a=.2,
+    omega_i=.8,
+    omega_c=.5,
+    calculation_type=ThreshCalculationTyp.MEDIAN_WEIGHTED,
+    thresholding_typ=ThreshHoldTyp.OTSU,
+    treshhold_manual=130
+)
+"""

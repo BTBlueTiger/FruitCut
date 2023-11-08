@@ -3,7 +3,7 @@ from enum import Enum
 
 import pygame
 
-from detector.game import Config
+import Config
 from detector.game.Utils import calculate_random_parabola
 
 

@@ -3,7 +3,7 @@ import random
 import numpy as np
 import pygame
 
-from detector.game import Config
+import Config
 
 
 class ScreenBorderType(Enum):

@@ -4,13 +4,11 @@ import pygame
 import requests
 import cv2
 import numpy as np
-import imutils
 import threading
 
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 
-from detector.game import Config
-from detector.computer_vision import BGS
+import Config
 
 
 class OpenCVCapture:
@@ -63,6 +61,7 @@ class OpenCVCapture:
 
             # Make a surface of it
             img_surface = pygame.surfarray.make_surface(img).convert()
+
 
             # Lock accesses to self.image to prevent race conditions
             with self.lock:

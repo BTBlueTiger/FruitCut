@@ -1,12 +1,9 @@
-import cv2
 import pygame
 
-import logging
-
-from detector.game import Config, Entity, Utils
-from detector.computer_vision.Cam import OpenCVCapture
+from detector.game import Entity, Utils
+import Config
+from detector.computer_vision.Cam import OpenCVCapture, Recorder
 from detector.computer_vision import BGS
-from detector.computer_vision.Cam import Recorder
 
 import logging
 
@@ -24,9 +21,7 @@ class Game:
         :param with_webcam: Should the IP CAM be used
         """
         pygame.init()
-
         logging.info("Pygame init")
-
         pygame.display.set_caption(Config.CAPTION)
         pygame.mixer.init()
         self.point_sound = pygame.mixer.Sound(f"{Config.SOUND_DIR}points.wav")
@@ -67,7 +62,7 @@ class Game:
         if with_webcam:
             self.cap = OpenCVCapture(Config.IP_CAM,
                                      frame_processor=BGS.BackSubProcessors[
-                                         BGS.BackSubTyp.MOG_OPEN_CV])
+                                         BGS.BackSubTyp.MOVING_AVERAGE])
             self.cap.start_fetching_thread()
             game_logger.info(f"Webcam with IP:{Config.IP_CAM}")
             if self.cap.frame_processor is not None:

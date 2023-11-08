@@ -1,0 +1,8 @@
+numpy~=1.22.3
+pygame~=2.5.2
+opencv-python~=4.8.1.78
+Cython~=3.0.5
+setuptools~=57.0.0
+requests~=2.27.1
+imutils~=0.5.4
+moviepy~=1.0.3
