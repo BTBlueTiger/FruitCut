@@ -74,3 +74,63 @@ ehthumbs.db
 *.orig
 
 res/Capture/
+
+# CMake build directory
+/build*/
+Release/
+
+# Compiled object files and libraries
+*.o
+*.a
+*.so
+
+# Generated files
+CMakeFiles/
+CMakeCache.txt
+CMakeScripts/
+CMakeTmp/
+Makefile
+Makefile.in
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+*.tlog
+detector/c_wrapper/out/
+
+
+# IDE-specific files and directories (customize for your IDE)
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.sln
+*.suo
+*.user
+*.sln
+*.user
+*.vcxproj
+*.vcxproj.filters
+
+# Executables (add more if needed)
+*.exe
+*.out
+
+
+# Logs and diagnostics
+*.log
+
+# Editor/IDE backup and autosave files
+*~
+*.swp
+*.swo
+*.swn
+*.swm
+*.swl
+*.swk
+*.swo
+
+# System or user files (customize as needed)
+Thumbs.db
+.DS_Store
+
