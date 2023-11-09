@@ -7,7 +7,7 @@ from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 import Config
 import pybind11
-from computer_vision.Release import moving_average_module
+from detector.c_wrapper.build.Release import moving_average_module
 
 
 class BackSubTyp(Enum):
@@ -98,10 +98,7 @@ class MovingAverage(BackSubProcessor):
         self.backSub = moving_average_module.MovingAverage(history)
 
     def _apply_filter(self, frame):
-        frame = np.array(frame, dtype=np.uint8)
-        self.backSub.apply(frame)
-        print("Hello")
-        return frame
+        return self.backSub.apply(frame)
 
 
 class MovingAverages(BackSubProcessor):
