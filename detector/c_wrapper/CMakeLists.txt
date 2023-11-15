@@ -4,6 +4,7 @@ if(POLICY CMP0011)
   cmake_policy(SET CMP0011 NEW)
 endif()
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2")
 
 #**************************************************************************************************
 # General CMake settings

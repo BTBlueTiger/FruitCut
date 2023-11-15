@@ -1,46 +1,92 @@
-﻿// CWrapperProject.cpp : Defines the entry point for the application.
+﻿// MovingAverage.cpp : Defines the entry point for the application.
 //
 
 #include "MovingAverage.h"
 
 namespace py = pybind11;
 
-MovingAverage::MovingAverage(const int history)
+MovingAverage::MovingAverage(const int history, const int threshold_t, const int thresholdManual)
 {
-	std::cout << "Initialized MovingAverage Instance of CWrapperProject" << std::endl;
+	std::cout << "Initialized MovingAverage Instance of Moving average" << std::endl;
     this->history = history;
+    std::cout << "Amount of Frames" << history << std::endl;
+    this->thresholdType = static_cast<ThresholdType>(threshold_t);
+    // Array of frames
+    this->frames = new cv::Mat[history];
+    if (threshold_t == ThresholdType::MANUAL)
+    {
+        this->thresholdManual = thresholdManual;
+    }
+    else
+    {
+        this->thresholdManual = 0;
+    }
 };
 
 MovingAverage::~MovingAverage()
 {
-
+    delete[] this->frames;
 }
 
-void MovingAverage::update_queue(cv::Mat& frame)
+void MovingAverage::updateQueue(cv::Mat& frame)
 {
-    this->frame_deque.push_back(frame);
-    if (this->frame_deque.size() > this->history)
+    this->frames[this->currentIndex] = frame;
+    uint8_t next_index = this->currentIndex + 1;
+    this->currentIndex = next_index % this->history;
+}
+
+
+void MovingAverage::calculateMedian()
+{
+    cv::Mat allFrames;
+    cv::vconcat(*this->frames, allFrames);
+    cv::medianBlur(allFrames, this->median, 1);     
+}
+
+void MovingAverage::thresholdFrame(cv::Mat& src, cv::Mat& dst)
+{
+    switch (this->thresholdType)
     {
-        this->frame_deque.pop_front();
+    case ThresholdType::ADAPTIVE:
+        cv::adaptiveThreshold(src, dst, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 11, -4);
+        break;
+    case ThresholdType::MANUAL:
+        cv::threshold(src, dst, this->thresholdManual, 255, cv::THRESH_BINARY);
+        break;
+    default:
+        break;
     }
-    std::cout << this->frame_deque.size() << std::endl;
+    
 }
 
 py::array_t<uint8_t> MovingAverage::apply(py::array_t<uint8_t>& frame) {
     cv::Mat cv_img;
     cv::Mat gray_img;
+    cv::Mat diff_img;
+    cv::Mat thresh;
     PyObject* frame_ptr = frame.ptr();
+
     try
     {
+        // Convert np.array to OpenCV matrix
         this->ndarrayConverter.toMat(frame_ptr, cv_img);
+        // Make an grayscale
         cv::cvtColor(cv_img, gray_img, cv::COLOR_BGR2GRAY);
+        this->updateQueue(gray_img);
+        // Calculate Median
+        this->calculateMedian();
+        // Difference
+        cv::absdiff(gray_img, this->median, diff_img);
+        // make the threshold
+        this->thresholdFrame(diff_img, thresh);
     }
     catch (const cv::Exception& e)
     {
         std::cerr << "OpenCV Error: " << e.what() << std::endl;
     }
     try {
-       auto ndArray =  this->ndarrayConverter.toNDArray(gray_img);
+        // Convert the matrix back
+       auto ndArray =  this->ndarrayConverter.toNDArray(thresh);
        return py::reinterpret_borrow<py::array_t<uint8_t>>(ndArray);
     }
     catch (...)
@@ -51,48 +97,11 @@ py::array_t<uint8_t> MovingAverage::apply(py::array_t<uint8_t>& frame) {
 }
 
 
-/*
-py::array_t<uint8_t> MovingAverage::apply(py::array_t<uint8_t>& frame) {
-    // Convert numpy array aka py::array_t to cv::Mat
-    auto buf = frame.request();
-    int rows = buf.shape[0];
-    int cols = buf.shape[1];
-    // Create a cv:Mat out of the frame from Python's np.array
-    cv::Mat bgr(rows, cols, CV_8U, buf.ptr);
-
-    // Convert to grayscale
-    cv::Mat grayScaleImg;
-    cv::cvtColor(bgr, grayScaleImg, cv::COLOR_BGR2GRAY);
-
-    cv::Mat thresh;
-    cv::threshold(grayScaleImg, thresh, 120, 255, cv::THRESH_BINARY);
-
-    this->update_queue(grayScaleImg);
-
-    // Convert cv::Mat to a NumPy array aka py::array_t
-    auto dtype = py::dtype::of<uint8_t>();
-    py::array_t<uint8_t> result({ grayScaleImg.rows, grayScaleImg.cols });
-
-    auto result_ptr = result.mutable_unchecked();
-    for (int i = 0; i < thresh.rows; ++i) {
-        for (int j = 0; j < thresh.cols; ++j) {
-            result_ptr(i, j) = thresh.at<uint8_t>(i, j);
-        }
-    }
-
-    return result;
-}
-*/
-
-
-
-
 PYBIND11_MODULE(moving_average_module, m)
 {
     NDArrayConverter::init_numpy();
-
     m.doc() = "pybind11 example plugin"; // optional module docstring
     py::class_<MovingAverage>(m, "MovingAverage")
-        .def(py::init<const int>(), "Initialize a MovingAverage with a specific length of history")
+        .def(py::init<const int, const int, const int>(), "Initialize a MovingAverage with a specific length of history")
         .def("apply", &MovingAverage::apply);
 }

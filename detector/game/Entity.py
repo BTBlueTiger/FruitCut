@@ -15,7 +15,8 @@ class Entity(pygame.sprite.Sprite):
         These entities have "x" and "y" values. It has an array of x and y values. This array represents a parabola of
         their path on the screen.
 
-        Future "cut" units have yet to override this behavior.
+        Future "cut" units have yet to override this behavior
+        :param image: name of the image, like apple. Everything else is set or can be changed in Config.TEXTURE_DIR
         :param x_values: represents each x value on its parabolic way
         :param y_values:represents each y value on its parabolic way
         :param speed: should in future configure speed of types
@@ -34,6 +35,7 @@ class Entity(pygame.sprite.Sprite):
         # if set true this entity will be removed from the main game sprite group and its entity list
         self.delete = False
         self.collision = False
+        # only now its flying down
         self.free2catch = False
 
     def getImage(self):
@@ -46,15 +48,20 @@ class Entity(pygame.sprite.Sprite):
         :return: Nothing
         """
         self.current_tick += 1
+        # if its calculated way is over
         if len(self.x_values) <= self.current_tick or \
                 len(self.y_values) <= self.current_tick:
             self.delete = True
+        # collide with the player -> catched or explosion
         elif self.collision:
             self.delete = True
         else:
+            # set the new x and y values
             previous_y = self.rect[1]
             self.rect[0] = self.x_values[self.current_tick]
             self.rect[1] = self.y_values[self.current_tick]
+            # now the entity reached its highest y value
+            # and can be catched
             if previous_y < self.rect[1]:
                 self.free2catch = True
 
@@ -94,10 +101,15 @@ ENTITY_CONFIG = {
 
 
 def get_random_entity():
+    # random choice of entities
     rand_entity = random.choice(list(EntityTyp))
+    # name of the entity
     entity_name = rand_entity.value
+    # get the entity and extract its values
     concrete_entity = ENTITY_CONFIG[entity_name]
     speed = concrete_entity["speed"]
     points = concrete_entity["points"]
+    # calculate a random parabola for the entities way
     parabola_array = calculate_random_parabola(speed)
+    # return the entity
     return Entity(entity_name, parabola_array[0], parabola_array[1], speed, points)

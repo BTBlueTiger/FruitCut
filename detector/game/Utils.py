@@ -2,6 +2,7 @@ from enum import Enum
 import random
 import numpy as np
 import pygame
+from numpy.core.records import ndarray
 
 import Config
 
@@ -17,7 +18,7 @@ class ScreenBorderType(Enum):
     ANY = 4
 
 
-def calculate_random_parabola(speed):
+def calculate_random_parabola(speed: int):
     """
     Calculates a random parabolic path of an entity.
 
@@ -55,7 +56,8 @@ def calculate_random_parabola(speed):
     return x_values, y_values
 
 
-def calculate_angle(pos_x):
+# DEPRECATED
+def calculate_angle(pos_x: tuple):
     """
     First idea of the trajectory, discarded but maybe still useful in the future.
     :param pos_x:
@@ -71,7 +73,10 @@ def calculate_angle(pos_x):
     return beta
 
 
-def draw_on_screen(screen, text, pos, color):
+def draw_text_on_screen(screen, text: str, pos: tuple, color: tuple):
+    """
+    Simple convinience function to draw a text with its attributes
+    """
     font = pygame.font.SysFont(Config.FONT_FAMILY, Config.FONT_SIZE)
     text = font.render(text, True, color)
     screen.blit(text, pos)

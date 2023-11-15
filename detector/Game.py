@@ -1,3 +1,5 @@
+import time
+
 import pygame
 
 from detector.game import Entity, Utils
@@ -24,6 +26,9 @@ class Game:
         logging.info("Pygame init")
         pygame.display.set_caption(Config.CAPTION)
         pygame.mixer.init()
+
+        self.current_time = time.time()
+
         self.point_sound = pygame.mixer.Sound(f"{Config.SOUND_DIR}points.wav")
         self.explosion_sound = pygame.mixer.Sound(f"{Config.SOUND_DIR}explosion.wav")
         self.point_sound.set_volume(0.5)
@@ -62,7 +67,7 @@ class Game:
         if with_webcam:
             self.cap = OpenCVCapture(Config.IP_CAM,
                                      frame_processor=BGS.BackSubProcessors[
-                                         BGS.BackSubTyp.MOVING_AVERAGE])
+                                         BGS.BackSubTyp.MOVING_AVERAGE_C_WRAPPER])
             self.cap.start_fetching_thread()
             game_logger.info(f"Webcam with IP:{Config.IP_CAM}")
             if self.cap.frame_processor is not None:
@@ -91,7 +96,12 @@ class Game:
         if self.show_fps:
             pos = (Config.SCREEN_WIDTH - 150, Config.SCREEN_HEIGHT - 75)
             black = (255, 255, 255)
-            Utils.draw_on_screen(self.screen, f"FPS: {self.clock.get_fps().__floor__()}", pos, black)
+            Utils.draw_text_on_screen(self.screen, f"FPS: {self.clock.get_fps().__floor__()}", pos, black)
+
+    def calculate_average_frames_per_second(self):
+        start = self.current_time
+        end = time.time()
+        return (end - start) / self.record_tick
 
     def run(self):
         while self.running:
@@ -158,6 +168,7 @@ class Game:
         # frames of the recorder will be saved at the end of the game
         if self.recorder is not None:
             self.recorder.convert_to_video()
+        print(f"Average Frames: {self.calculate_average_frames_per_second()}")
         pygame.quit()
 
 
@@ -178,7 +189,7 @@ class Player(pygame.sprite.Sprite):
         self.points += points
 
     def update_score_board(self, screen):
-        Utils.draw_on_screen(screen, f'Score: {self.points}', self.score_board_pos, self.color)
+        Utils.draw_text_on_screen(screen, f'Score: {self.points}', self.score_board_pos, self.color)
 
     def update_mouse(self, pos):
         self.rect.update(pos[0] - self.size // 2, pos[1] - self.size // 2, self.size, self.size)
