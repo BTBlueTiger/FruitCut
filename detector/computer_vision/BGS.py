@@ -8,7 +8,7 @@ from numpy import dtype
 from numpy.core import generic
 from numpy.core.records import ndarray
 
-from detector.c_wrapper.build.Release import moving_average_module
+from build.Release import moving_average_module
 
 
 class BackSubTyp(Enum):

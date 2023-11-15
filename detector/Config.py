@@ -1,21 +1,18 @@
 import os
 
-# Pygame Screen Settings
-import pygame.font
-
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 SCREEN = [SCREEN_WIDTH, SCREEN_HEIGHT]
 FPS = 30
 CAPTION = "Fruit Cut"
 
-# Parabola parameters, explained in Utils.py in @calculate_random_parabola
+# Parabola parameters, explained in ./detector/Game/Utils.py in @calculate_random_parabola
 SCREEN_MIN_WIDTH_FRUIT = 150
 SCREEN_MIN_HEIGHT_FRUIT = 100
 SCREEN_MAX_HEIGHT_FRUIT = 200
 
 # Webcam URL
-IP_CAM = "http://192.168.178.58:8080"
+IP_CAM = "http://192.168.107.68:8080"
 
 ASSET_DIR = os.path.join(os.path.dirname(__file__), "../res/Assets\\")
 

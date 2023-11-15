@@ -1,14 +1,11 @@
 import os
-
 import pygame
 import requests
 import cv2
 import numpy as np
 import threading
-
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
-
-import Config
+from detector import Config
 
 
 class OpenCVCapture:

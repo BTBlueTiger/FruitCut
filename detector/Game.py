@@ -1,13 +1,13 @@
 import time
-
 import pygame
+import logging
 
 from detector.game import Entity, Utils
 import Config
 from detector.computer_vision.Cam import OpenCVCapture, Recorder
 from detector.computer_vision import BGS
 
-import logging
+
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)

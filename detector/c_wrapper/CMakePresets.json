@@ -3,7 +3,7 @@
     "configurePresets": [
       {
         "name": "windows-base",
-        "toolchainFile": "C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "toolchainFile": "$ENV{VCPKG_DIR}/scripts/buildsystems/vcpkg.cmake",
         "hidden": true,
         "generator": "Ninja",
         "binaryDir": "${sourceDir}/out/build/${presetName}",
