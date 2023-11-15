@@ -1,8 +1,10 @@
 from enum import Enum
 import random
 import numpy as np
+import pygame
+from numpy.core.records import ndarray
 
-from detector.game import Config
+import Config
 
 
 class ScreenBorderType(Enum):
@@ -16,7 +18,7 @@ class ScreenBorderType(Enum):
     ANY = 4
 
 
-def calculate_random_parabola(speed):
+def calculate_random_parabola(speed: int):
     """
     Calculates a random parabolic path of an entity.
 
@@ -36,11 +38,14 @@ def calculate_random_parabola(speed):
     # Calculate the coefficient "a" to ensure the parabola inverts and opens downward
     a = (Config.SCREEN_HEIGHT - highest_point) / ((vertex - middle_of_x) ** 2)
 
-    # create with numpy the x values of the parabola, 100 -> 100 values of x
+    # create with numpy the x values of the parabola
+    # speed * points on path
+    # the lower speed * points_on_path -> faster fruit
+    points_on_path = 40
     if x_pos > middle_of_x:
-        x_values = np.linspace(middle_of_x, x_pos, speed * 40)
+        x_values = np.linspace(middle_of_x, x_pos, speed * points_on_path)
     else:
-        x_values = np.linspace(x_pos, middle_of_x, speed * 40)
+        x_values = np.linspace(x_pos, middle_of_x, speed * points_on_path)
 
     if random.randint(0, 1) == 0:
         x_values.sort(-1)
@@ -51,9 +56,10 @@ def calculate_random_parabola(speed):
     return x_values, y_values
 
 
-def calculate_angle(pos_x):
+# DEPRECATED
+def calculate_angle(pos_x: tuple):
     """
-    First idea of the trajectory, discarded but maybe still useful in the future for cut fruit.
+    First idea of the trajectory, discarded but maybe still useful in the future.
     :param pos_x:
     :return:
     """
@@ -67,29 +73,10 @@ def calculate_angle(pos_x):
     return beta
 
 
-def calculate_rest_path(entity_pos):
-    # Given data
-    start_x = entity_pos[0]  # Adjust the starting x-coordinate as needed
-    start_y = entity_pos[1]  # Adjust the starting y-coordinate as needed
-    y_axis = Config.SCREEN_HEIGHT  # The desired y-axis position
-
-    # Calculate the vertex (h, k) using the starting point
-    h = start_x
-    k = start_y
-
-    # Calculate x1 and x2 such that the parabola reaches the y-axis at Config.SCREEN_HEIGHT
-    # Ensure that x1 and x2 are within the screen bounds
-    x1 = h - np.sqrt(k / (y_axis - k))
-    x2 = h + np.sqrt(k / (y_axis - k))
-    x1 = max(x1, 0)  # Ensure x1 is not negative
-    x2 = min(x2, Config.SCREEN_WIDTH)  # Ensure x2 is not greater than the screen width
-
-    # Calculate the coefficient a using the vertex form of the parabola equation
-    a = k / min((x1 - h) ** 2, (x2 - h) ** 2)
-
-    # Create an array of x values that spans from x1 to x2
-    x = np.linspace(x1, x2, 50)  # Adjust the number of points as needed
-
-    # Calculate the y values using the parabola equation
-    y = a * (x - h) ** 2 + k
-    return x, y
+def draw_text_on_screen(screen, text: str, pos: tuple, color: tuple):
+    """
+    Simple convinience function to draw a text with its attributes
+    """
+    font = pygame.font.SysFont(Config.FONT_FAMILY, Config.FONT_SIZE)
+    text = font.render(text, True, color)
+    screen.blit(text, pos)
