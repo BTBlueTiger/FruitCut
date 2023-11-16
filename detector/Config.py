@@ -1,4 +1,5 @@
 import os
+from detector.computer_vision import BGS
 
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
@@ -29,3 +30,5 @@ RECORD_DIR = os.path.join(os.path.dirname(__file__), "../res/Capture\\")
 
 FONT_SIZE = 26
 FONT_FAMILY = "corbel"
+
+

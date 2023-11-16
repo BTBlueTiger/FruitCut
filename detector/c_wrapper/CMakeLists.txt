@@ -25,7 +25,7 @@ find_package(Python3 3.7 COMPONENTS Interpreter NumPy REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 MESSAGE( " *** PYTHON_INCLUDE_DIRS : " ${PYTHON_INCLUDE_DIRS} )
 MESSAGE( " *** PYTHON_LIBRARIES : " ${PYTHON_LIBRARIES} )
-MESSAGE( " *** PYTHON_LIBRARIES : " ${pybind11_INCLUDE_DIR} )
+MESSAGE( " *** PY_Bind DIr : " ${pybind11_INCLUDE_DIR} )
 
 
 

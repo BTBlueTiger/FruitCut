@@ -1,13 +1,14 @@
 import time
+
+import numpy as np
 import pygame
 import logging
+import cv2
 
 from detector.game import Entity, Utils
 import Config
 from detector.computer_vision.Cam import OpenCVCapture, Recorder
 from detector.computer_vision import BGS
-
-
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
@@ -35,6 +36,7 @@ class Game:
 
         self.running = True
         self.screen = pygame.display.set_mode(Config.SCREEN)
+        self.screen_thresh = pygame.display.set_mode(Config.SCREEN)
 
         game_logger.info(f"Display: {Config.SCREEN}")
 
@@ -67,7 +69,7 @@ class Game:
         if with_webcam:
             self.cap = OpenCVCapture(Config.IP_CAM,
                                      frame_processor=BGS.BackSubProcessors[
-                                         BGS.BackSubTyp.MOVING_AVERAGE_C_WRAPPER])
+                                         BGS.BackSubTyp.KNN_OPEN_CV])
             self.cap.start_fetching_thread()
             game_logger.info(f"Webcam with IP:{Config.IP_CAM}")
             if self.cap.frame_processor is not None:
@@ -113,8 +115,20 @@ class Game:
             if self.cap is not None:
                 # cam is running in another thread,
                 # its normal that at start no image is available
-                if self.cap.get_ip_cam_img():
-                    self.screen.blit(self.cap.get_ip_cam_img(), (0, 0))
+                if self.cap.get_ip_cam_img() is not None:
+                    threshold = self.cap.get_ip_cam_img()
+                    img_surface = pygame.surfarray.make_surface(threshold).convert()
+                    self.screen.blit(img_surface, (0, 0))
+                    try:
+                        contours, _ = cv2.findContours(threshold, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+                        largest_contour = max(contours, key=cv2.contourArea)
+                        player.update_pos(largest_contour, self.screen)
+                    except:
+                        "Bug To Solve"
+
+
+
+
             else:
                 self.screen.fill((0, 0, 0))
 
@@ -127,7 +141,6 @@ class Game:
 
             for player in self.players:
                 player.update_score_board(self.screen)
-                player.update_mouse(pygame.mouse.get_pos())
 
             # update entities
             for entity in self.entities:
@@ -168,8 +181,9 @@ class Game:
         # frames of the recorder will be saved at the end of the game
         if self.recorder is not None:
             self.recorder.convert_to_video()
-        print(f"Average Frames: {self.calculate_average_frames_per_second()}")
-        pygame.quit()
+        if self.recorder:
+            print(f"Average Frames: {self.calculate_average_frames_per_second()}")
+            pygame.quit()
 
 
 class Player(pygame.sprite.Sprite):
@@ -191,9 +205,14 @@ class Player(pygame.sprite.Sprite):
     def update_score_board(self, screen):
         Utils.draw_text_on_screen(screen, f'Score: {self.points}', self.score_board_pos, self.color)
 
-    def update_mouse(self, pos):
-        self.rect.update(pos[0] - self.size // 2, pos[1] - self.size // 2, self.size, self.size)
+    def update_pos(self, contour, screen):
+        y, x, w, h = cv2.boundingRect(contour)
+        pygame.draw.rect(screen, (0, 255, 0), (x, y, w, h), 2)
+        mid_x = x + w // 2 - self.size // 2
+        mid_y = y + h // 2 - self.size // 2
+        self.rect.x = mid_x
+        self.rect.y = mid_y
 
 
-game = Game(record_on=False, with_webcam=True, show_fps=True)
+game = Game(record_on=True, with_webcam=True, show_fps=True)
 game.run()

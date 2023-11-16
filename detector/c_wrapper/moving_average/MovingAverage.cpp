@@ -75,8 +75,10 @@ py::array_t<uint8_t> MovingAverage::apply(py::array_t<uint8_t>& frame) {
         this->updateQueue(gray_img);
         // Calculate Median
         this->calculateMedian();
+        cv::Mat background;
+        cv::addWeighted(gray_img, 0.2, this->median, 0.8, 0, background);
         // Difference
-        cv::absdiff(gray_img, this->median, diff_img);
+        cv::absdiff(gray_img, background, diff_img);
         // make the threshold
         this->thresholdFrame(diff_img, thresh);
     }

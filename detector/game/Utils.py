@@ -4,7 +4,7 @@ import numpy as np
 import pygame
 from numpy.core.records import ndarray
 
-import Config
+from detector import Config
 
 
 class ScreenBorderType(Enum):

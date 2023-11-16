@@ -1,10 +1,13 @@
 import os
+
 import pygame
 import requests
 import cv2
 import numpy as np
 import threading
+
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+
 from detector import Config
 
 
@@ -23,7 +26,7 @@ class OpenCVCapture:
         self.frame_processor = frame_processor
         self.frame_processor.start_calculation_thread()
 
-    def get_ip_cam_img(self) -> pygame.Surface:
+    def get_ip_cam_img(self):
         """
         Gets the image from a separate thread.
         :return: a edited image as pygame surface
@@ -56,13 +59,11 @@ class OpenCVCapture:
             else:
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-            # Make a surface of it
-            img_surface = pygame.surfarray.make_surface(img).convert()
 
 
             # Lock accesses to self.image to prevent race conditions
             with self.lock:
-                self.image = img_surface
+                self.image = img
 
     def start_fetching_thread(self):
         """
