@@ -38,6 +38,10 @@ Linux:
 ```
 cmake ../detector/c_wrapper -DCMAKE_TOOLCHAIN_FILE="<PATH_TO_VCPKG_DIR>/scripts/buildsystems/vcpkg.cmake"
 ```
+Letzter Schritt:
+```
+cmake --build . --config Release
+```
 
 Mit Pycharm lässt sich das Spiel nun einfach starten.
 Mit nur Python gibt es noch ein paar Import Schwierigkeiten
@@ -61,3 +65,7 @@ Jedes Handy kann aber als IP Webcam fungieren mit der gleichnamigen App IP Webca
  - Hier werden auch die Assets gespeichert
  - Unter PDF's sind die Folien als PDF gespeichert
  - Research soll Paper in Zusammenhang mit den einzelnen Meilensteinen sammeln
+
+
+Dank an das Repo [https://github.com/edmBernard/pybind11_opencv_numpy.git](https://github.com/edmBernard/pybind11_opencv_numpy.git)
+Es half sehr beim wrappen und auch der NDArrayConverter wird genutzt
