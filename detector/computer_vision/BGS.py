@@ -9,6 +9,7 @@ from numpy.core import generic
 from numpy.core.records import ndarray
 
 from build.Release import moving_average_module
+from build.Release import moving_average_history_module
 
 
 class BackSubTyp(Enum):
@@ -19,6 +20,7 @@ class BackSubTyp(Enum):
     KNN_OPEN_CV = 1
     MOVING_AVERAGE_PYTHON = 2
     MOVING_AVERAGE_C_WRAPPER = 3
+    MOVING_AVERAGE_HISTORY_C_WRAPPER = 4
 
 
 class ThreshHoldTyp(Enum):
@@ -46,7 +48,7 @@ class BackSubProcessor:
         the correct calculation.
         Prevents so-called race conditions.
         In addition, self._calculation_lock is used.
-        3. processed.frame, our finished image is generated with the help of _apply_filter().
+        MOG_HIST_100_X_50. processed.frame, our finished image is generated with the help of _apply_filter().
         Each processor must overwrite _apply_filter.
         The OpenCV use their apply method here.
         Other subclasses can use the threads in a similar way. Or extend the methods to save frames in apply,
@@ -91,11 +93,10 @@ class BackSubProcessor:
         raise NotImplementedError("Subclasses must implement _apply_filter")
 
 
-extra = 6250
 
 
 class MogOpenCV(BackSubProcessor):
-    def __init__(self, history=10):
+    def __init__(self, history=10, extra=0):
         """
         Simple MOG implementation of open cv
         """
@@ -108,7 +109,7 @@ class MogOpenCV(BackSubProcessor):
 
 
 class KnnOpenCV(BackSubProcessor):
-    def __init__(self, history=10):
+    def __init__(self, history=10, extra=0):
         super().__init__(history=history)
         self.backSub = cv2.createBackgroundSubtractorKNN(history=self._history, dist2Threshold=extra,
                                                          detectShadows=False)
@@ -121,13 +122,31 @@ class KnnOpenCV(BackSubProcessor):
 
 
 class MovingAverageCWrapper(BackSubProcessor):
-    def __init__(self, history, threshold_t, threshold):
+    def __init__(self, threshold_t, threshold):
         """
         Self implemented c wrapped moving average
         cv2.createBackgroundSubtractor Style
         """
+        super().__init__(history=0)
+        self.backSub = moving_average_module.MovingAverage(threshold_t, threshold)
+
+    def _apply_filter(self, frame) -> ndarray[Any, dtype[generic]]:
+        """
+        returns a py::array_t<uint8_t> -> ndarray[Any, dtype[generic]]
+        """
+        return self.backSub.apply(frame)
+
+
+class MovingAverageHistoryCWrapper(BackSubProcessor):
+    def __init__(self, history, threshold_t, threshold):
+        """
+        An approach with history, not so good
+
+        Self implemented c wrapped moving average
+        cv2.createBackgroundSubtractor Style
+        """
         super().__init__(history=history)
-        self.backSub = moving_average_module.MovingAverage(history, threshold_t, threshold)
+        self.backSub = moving_average_history_module.MovingAverageHistory(history, threshold_t, threshold)
 
     def _apply_filter(self, frame) -> ndarray[Any, dtype[generic]]:
         """
@@ -187,13 +206,14 @@ class MovingAveragePython(BackSubProcessor):
         return self.__frame(result_frame)
 
 
-hist = 20
+hist = 100
 
 # BackSubProcessor Dictionary
 
 BackSubProcessors = {
-    BackSubTyp.MOG_OPEN_CV: MogOpenCV(hist),
-    BackSubTyp.KNN_OPEN_CV: KnnOpenCV(hist),
-    BackSubTyp.MOVING_AVERAGE_C_WRAPPER: MovingAverageCWrapper(hist, ThreshHoldTyp.ADAPTIV.value, 50),
+    BackSubTyp.MOG_OPEN_CV: MogOpenCV(100, 50),
+    BackSubTyp.KNN_OPEN_CV: KnnOpenCV(100, 1250),
+    BackSubTyp.MOVING_AVERAGE_C_WRAPPER: MovingAverageCWrapper(ThreshHoldTyp.MANUAL.value, 45),
+    BackSubTyp.MOVING_AVERAGE_HISTORY_C_WRAPPER: MovingAverageHistoryCWrapper(hist, ThreshHoldTyp.MANUAL.value, 45),
     BackSubTyp.MOVING_AVERAGE_PYTHON: MovingAveragePython()
 }

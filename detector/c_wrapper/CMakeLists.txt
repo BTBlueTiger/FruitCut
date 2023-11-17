@@ -51,6 +51,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 # Set variable **************************************************************************************************
 SET(SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/moving_average/MovingAverage.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/moving_average_history/MovingAverageHistory.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/numpy_converter/ndarray_converter.cpp
 )
 
@@ -72,5 +73,7 @@ LINK_DIRECTORIES(
 # Make configuration
 #**************************************************************************************************
 pybind11_add_module(moving_average_module MODULE ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/moving_average/MovingAverage.cpp)
+pybind11_add_module(moving_average_history_module MODULE ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/moving_average_history/MovingAverageHistory.cpp)
 target_link_libraries(moving_average_module PRIVATE ${OpenCV_LIBS} ${PYTHON_LIBRARIES} Python3::NumPy)
+target_link_libraries(moving_average_history_module PRIVATE ${OpenCV_LIBS} ${PYTHON_LIBRARIES} Python3::NumPy)
 

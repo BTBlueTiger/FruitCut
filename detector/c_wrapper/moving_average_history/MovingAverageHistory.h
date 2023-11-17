@@ -40,24 +40,36 @@ enum ThresholdType {
 /*
  * Background suppressor to separate the foreground from the background.
  */
-class MovingAverage {
+class MovingAverageHistory {
 private:
     // Our frames
-    cv::Mat currentFrame;
-    cv::Mat gray_img;
-    cv::Mat background;
-    cv::Mat subtracted;
+    cv::Mat* frames;
+    cv::Mat median;
 
+    // Index of "history"
+    uint8_t currentIndex = 0;
 
     // The variant of the threshold
     ThresholdType thresholdType;
     uint8_t thresholdManual;
 
+    // Const values that should not change after first initialization
+    size_t history;
+
     // Converter from: https://github.com/edmBernard/pybind11_opencv_numpy
     NDArrayConverter ndarrayConverter;
 
+    /**
+     * Update the queue with a new frame from a Python script.
+     *
+     * @param frame: A converted OpenCV Mat, typically using NDArrayConverter.
+     */
+    void updateQueue(cv::Mat& frame);
 
-    bool isInit = false;
+    /**
+     * Calculate the current median with all frames.
+     */
+    void calculateMedian();
 
     /**
      * Apply thresholding to an image.
@@ -76,8 +88,8 @@ public:
      * @param manualThreshold: If the user sets the threshold manually, we need a manual threshold;
      *                        otherwise, it will be set to zero.
      */
-    MovingAverage(const int thresholdType, const int manualThreshold);
-    ~MovingAverage();
+    MovingAverageHistory(const int history, const int thresholdType, const int manualThreshold);
+    ~MovingAverageHistory();
 
     /**
      * Main function called from Python.

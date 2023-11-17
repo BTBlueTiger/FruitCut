@@ -69,7 +69,7 @@ class Game:
         if with_webcam:
             self.cap = OpenCVCapture(Config.IP_CAM,
                                      frame_processor=BGS.BackSubProcessors[
-                                         BGS.BackSubTyp.KNN_OPEN_CV])
+                                         BGS.BackSubTyp.MOVING_AVERAGE_C_WRAPPER])
             self.cap.start_fetching_thread()
             game_logger.info(f"Webcam with IP:{Config.IP_CAM}")
             if self.cap.frame_processor is not None:

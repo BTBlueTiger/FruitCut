@@ -13,7 +13,7 @@ SCREEN_MIN_HEIGHT_FRUIT = 100
 SCREEN_MAX_HEIGHT_FRUIT = 200
 
 # Webcam URL
-IP_CAM = "http://192.168.107.68:8080"
+IP_CAM = "http://192.168.178.58:8080"
 
 ASSET_DIR = os.path.join(os.path.dirname(__file__), "../res/Assets\\")
 
